@@ -154,7 +154,7 @@ print(f"El retorno esperado histórico es de {mi_cartera.retorno_esperado:.2%}")
 print(f"Portafolio mínima varianza:")
 tickers_ordenados = mi_cartera.datos_historicos.columns
 for ticker, peso in zip(tickers_ordenados, mi_cartera.weights_optimos):
-    if peso>0.001:
+    if abs(peso)>0.001:
         print(f" - {ticker}: {peso:.2%}")
 print(f"Esta cartera tiene un riesgo del {mi_cartera.var_min_portafolio:.2%}")
 print("------------------------------------------------")
