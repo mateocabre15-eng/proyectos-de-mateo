@@ -1,6 +1,10 @@
 import yfinance as yf
 import numpy as np
 import pandas as pd
+import plotly.express as pyl
+import plotly.graph_objects as go
+import plotly.io as pio
+pio.renderers.default = "browser"
 # Este proyecto se trata de un analizador de portafolios, usando datos históricos de yfinance
 class Portafolio():
     def __init__(self, posiciones_iniciales):
@@ -11,10 +15,14 @@ class Portafolio():
         self.matriz_covarianzas= None
         self.weights_optimos = None
         self.var_min_portafolio = None
+        self.simulaciones = None
+        self.retornos_individuales = None
 
     def descargar_datos(self):
         lista_tickers = [item["ticker"] for item in self.posiciones]
         datos_anuales = yf.download(lista_tickers, period="1y")['Close']
+        if datos_anuales.empty:
+            raise ValueError("No hay datos válidos")
         self.datos_historicos = datos_anuales
 
     def calcular_pesos(self):
@@ -47,6 +55,7 @@ class Portafolio():
             retorno_esperado_total += (weight_individual * retorno_individual)
             
         self.retorno_esperado = retorno_esperado_total
+        self.retornos_individuales = retorno_total_ultimo_año
     def calcular_matriz_covarianzas(self):
         retornos_porcentuales = self.datos_historicos.pct_change().dropna()
 
@@ -68,7 +77,34 @@ class Portafolio():
         varianza = w.T @ sigma @ w
         riesgo = np.sqrt(varianza)
         self.var_min_portafolio = riesgo
-        
+    def graficar_frontera(self, num_simulaciones=5000):
+        resultados = []
+        sigma = self.matriz_covarianzas.values
+        n = sigma.shape[0]
+        for _ in range(num_simulaciones):
+            pesos_crudos = np.random.random(n)
+            pesos_normalizados = pesos_crudos / np.sum(pesos_crudos)
+            varianza = pesos_normalizados.T @ sigma @ pesos_normalizados
+            riesgo = np.sqrt(varianza)
+            retorno = pesos_normalizados @ self.retornos_individuales
+            resultados.append((riesgo, retorno))
+        self.simulaciones = resultados
+        x = []
+        y = []
+        for simulacion in self.simulaciones:
+            x.append(simulacion[0])
+            y.append(simulacion[1])
+        fig = pyl.scatter(x= x, y= y)
+        retorno_min_var = self.weights_optimos @ self.retornos_individuales
+        fig.add_scatter(
+            x=[self.var_min_portafolio], 
+            y=[retorno_min_var], 
+            mode='markers', 
+            marker=dict(color='red', size=12, symbol='star'),
+            name='Mínima Varianza'
+        )
+        fig.write_html("mi_frontera_eficiente.html")
+ 
 acciones = {
     # Wall Street
     "apple": "AAPL",
@@ -133,7 +169,9 @@ while True:
     accion=acciones.get(ticker, ticker).upper()
     info_ticker=yf.Ticker(accion)
 
-    if info_ticker.history(period="1d").empty: print("No encontré ese ticker.")
+    if info_ticker.history(period="1d").empty:
+        print("No encontré ese ticker.")
+        continue
     try:
 
         cantidad = int(input(f"¿Cuántas acciones de {accion} tienes?: "))
@@ -158,3 +196,8 @@ for ticker, peso in zip(tickers_ordenados, mi_cartera.weights_optimos):
         print(f" - {ticker}: {peso:.2%}")
 print(f"Esta cartera tiene un riesgo del {mi_cartera.var_min_portafolio:.2%}")
 print("------------------------------------------------")
+mi_cartera.graficar_frontera()
+"""Algunas aclaraciones del proyecto:
+    - El retorno histórico no es esperado, podria haberlo calculado pero preferia mantenerlo simple
+    - Puse un raise ValueError por si yfinance te tira un NaN, pero es posible que los tickers fallen,
+      si eso ocurre el programa no te va a tirar el portafolio de minima varianza"""
