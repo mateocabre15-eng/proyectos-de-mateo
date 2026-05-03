@@ -9,3 +9,19 @@ print(pipi[1, 2] + pipi[0, 0])
     por cada dimension se suma un elemento que debemos especificar"""
 
 print(pipi[::-1])
+
+""" dentro de los arrays tambien podemos seleccionar distintas filas con :
+    separando inicio:final:salto
+    el salto lo que hace es ir omitiendo filas cada x veces
+    recordar que el - hace que se invierta el orden"""
+
+print(pipi[:, 2])
+
+""" si ponemos un : se seleccionan todos los elementos de la dimension, haciendo que
+    nos devuelva para cada fila (1d) la columna 2 (2d)"""
+
+print (pipi[:, 4:]) # cada columna desde la 5ta hasta la ultima
+
+print(pipi[0, :2])
+
+#  ------------ Aritmética ----------
